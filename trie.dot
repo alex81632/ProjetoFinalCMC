@@ -1,0 +1,22 @@
+digraph FST {
+    rankdir=LR;
+    node [shape=circle];
+    node [style=filled];
+    node [fillcolor="#EEEEEE"];
+    node [color="#EEEEEE"];
+    edge [color="#31CEF0"];
+    edge [style="bold"];
+    edge [arrowsize=1.5];
+    1 -> 2 [label="m"];
+    2 -> 3 [label="o"];
+    3 -> 4 [label="n"];
+    1 -> 5 [label="t"];
+    5 -> 6 [label="h"];
+    6 -> 7 [label="u"];
+    7 -> 8 [label="r"];
+    8 -> 4 [label="s"];
+    7 -> 4 [label="e"];
+    1 -> 11 [label="z"];
+    11 -> 12 [label="o"];
+    12 -> 13 [label="n"];
+}
