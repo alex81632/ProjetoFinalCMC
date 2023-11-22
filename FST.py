@@ -1,7 +1,5 @@
 # FST ( Minimal Deterministic Finite State Transducer )
 
-import graphviz
-
 class TRIE:
 
     class Estado:
@@ -45,6 +43,8 @@ class TRIE:
             self.imprimir_filhos(transicao.estado2, arquivo)
         
         arquivo.write('}')
+
+        print("Número de nós:", self.num_nos)
 
     def imprimir_filhos(self, estado: Estado, arquivo) -> None:
         '''
@@ -111,9 +111,6 @@ class TRIE:
             no_atual.final = True
             no_atual = self.raiz
 
-        self.imprimir()
-
-
 class FST:
 
     class Estado:
@@ -124,6 +121,7 @@ class FST:
             self.final = False
             self.impresso = False
             self.anti_impresso = False
+            self.congelado = False
         
         def __repr__(self) -> str:
             return str(self.name)
@@ -133,7 +131,6 @@ class FST:
             self.estado1 = None
             self.estado2 = None
             self.valor = None
-            self.indice = None
 
         def __repr__(self) -> str:
             return str(self.valor)
@@ -191,6 +188,8 @@ class FST:
         '''
         Imprime a FST em um arquivo fst.dot
         '''
+        self.num_nos = 1
+
         arquivo = open("fst.dot", 'w')
         arquivo.write('digraph FST {\n')
         arquivo.write('    rankdir=LR;\n')
@@ -212,11 +211,13 @@ class FST:
         
         arquivo.write('}')
 
+        print("Número de nós:", self.num_nos)
+
     def imprimir_filhos(self, estado: Estado, arquivo) -> None:
         '''
         Imprimir as transiçõs em DFS
         '''
-
+        self.num_nos += 1
         if estado.final:
             arquivo.write(f'    {estado.name} [shape=doublecircle];\n')
 
@@ -282,9 +283,9 @@ class FST:
 
         no_similar = self.achar_transicao_inversa(estado, valor)
 
-        if no_similar == no_adicionado or no_similar == None or no_adicionado == None or no_similar.final != no_adicionado.final or no_adicionado == self.ultimo:
+        if no_similar == no_adicionado or no_similar == None or no_adicionado == None or no_similar.final != no_adicionado.final or no_adicionado == self.ultimo or no_similar.congelado == False or len(no_similar.transicoes) > 1 or len(no_adicionado.transicoes) > 1:
             return
-        
+
         estado.transicoes_inversas.pop()
         
         for transicao_inv in no_adicionado.transicoes_inversas:
@@ -299,23 +300,17 @@ class FST:
                     nova_transicao_inversa.valor = transicao_inv.valor
                     no_similar.transicoes_inversas.append(nova_transicao_inversa)
 
-        # self.junta_transicoes(no_similar)
+        self.junta_transicoes(no_similar)
 
     def adicionar(self, estado: Estado) -> None:
         '''
         Percorre o caminho recem congelado e muda o último estado para a anti_raiz
         '''
         no_atual = estado
-
-        cont = 0
+        no_atual.congelado = True
 
         while len(no_atual.transicoes):
             no_atual = no_atual.transicoes[-1].estado2
-
-            cont += 1
-            if cont > 100:
-                print("loop", len(no_atual.transicoes), no_atual, no_atual.transicoes[-1].estado2)
-                break
 
         if no_atual == self.anti_raiz:
             return
@@ -351,10 +346,10 @@ class FST:
         for j in range(len(self.words)):
             word = self.words[j]
             
-            print(j)
-            
             for i in range(len(word)):
-                if(self.achar_transicao(no_atual, word[i]) == None):
+                no = self.achar_transicao(no_atual, word[i])
+
+                if(no == None):
 
                     # Novo Estado
                     self.num_nos += 1
@@ -384,7 +379,10 @@ class FST:
                     transicao_inversa.valor = valor
                     novo_no.transicoes_inversas.append(transicao_inversa)
 
-                no_atual = self.achar_transicao(no_atual, word[i])
+                    no_atual = novo_no
+                    
+                else:
+                    no_atual = no
             no_atual.final = True
 
             if self.anti_raiz == None:
@@ -393,8 +391,3 @@ class FST:
             no_atual = self.raiz
         
         self.adicionar(self.ultimo)
-
-        print(self.anti_raiz)
-
-        self.imprimir()
-        self.imprimir_inverso()
