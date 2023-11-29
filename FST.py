@@ -174,6 +174,24 @@ class FST:
             if transicao_inversa.valor == valor:
                 return transicao_inversa.estado2
 
+    def transicao(self, estado1: Estado, estado2: Estado, valor: str) -> None:
+        '''
+        Cria uma transição entre dois estados
+        '''
+        # Transição
+        nova_transicao = self.Transicao()
+        nova_transicao.estado1 = estado1
+        nova_transicao.estado2 = estado2
+        nova_transicao.valor = valor
+        estado1.transicoes.append(nova_transicao)
+
+        # Transição Inversa
+        transicao_inversa = self.Transicao()
+        transicao_inversa.estado1 = estado2
+        transicao_inversa.estado2 = estado1
+        transicao_inversa.valor = valor
+        estado2.transicoes_inversas.append(transicao_inversa)
+
     def junta_transicoes(self, estado: Estado) -> None:
         '''
         Junta as transições da anti_raiz que tem mesmo sufixo
@@ -187,28 +205,30 @@ class FST:
 
         no_similar = self.achar_transicao_inversa(estado, valor)
 
-        if no_similar == no_adicionado:
-            return
-        
         if no_similar == None:
+            return
+
+        if no_similar == no_adicionado:
             return
         
         if no_similar.final != no_adicionado.final:
             return
-
-        estado.transicoes_inversas.pop()
         
-        for transicao_inv in no_adicionado.transicoes_inversas:
-            for transicao in transicao_inv.estado2.transicoes:
-                if transicao.estado2 == no_adicionado:
-                    transicao.estado2 = no_similar
+        if len(no_similar.transicoes) > 1:
+            return
+        
+        estado.transicoes_inversas.pop()
 
-                    # Transição Inversa
-                    nova_transicao_inversa = self.Transicao()
-                    nova_transicao_inversa.estado1 = no_similar
-                    nova_transicao_inversa.estado2 = transicao_inv.estado2
-                    nova_transicao_inversa.valor = transicao_inv.valor
-                    no_similar.transicoes_inversas.append(nova_transicao_inversa)
+        transicao_inv = no_adicionado.transicoes_inversas[-1]
+
+        transicao_inv.estado2.transicoes[-1].estado2 = no_similar
+
+        # Transição Inversa
+        nova_transicao_inversa = self.Transicao()
+        nova_transicao_inversa.estado1 = no_similar
+        nova_transicao_inversa.estado2 = transicao_inv.estado2
+        nova_transicao_inversa.valor = transicao_inv.valor
+        no_similar.transicoes_inversas.append(nova_transicao_inversa)
 
         self.junta_transicoes(no_similar)
 
@@ -231,73 +251,54 @@ class FST:
 
         no_atual.transicoes.pop()
 
-        # Nova Transição
-        nova_transicao = self.Transicao()
-        nova_transicao.estado1 = no_atual
-        nova_transicao.estado2 = self.anti_raiz
-        nova_transicao.valor = valor
-        no_atual.transicoes.append(nova_transicao)
-
-        # Nova Transição Inversa
-        nova_transicao_inversa = self.Transicao()
-        nova_transicao_inversa.estado1 = self.anti_raiz
-        nova_transicao_inversa.estado2 = no_atual
-        nova_transicao_inversa.valor = valor
-        self.anti_raiz.transicoes_inversas.append(nova_transicao_inversa)
+        self.transicao(no_atual, self.anti_raiz, valor)
 
         self.junta_transicoes(self.anti_raiz)
 
         return
+    
+    def add(self, word: str) -> None:
+        '''
+        Adiciona uma palavra à FST
+        '''
+        no_atual = self.raiz
+        for i in range(len(word)):
+            no = self.achar_transicao(no_atual, word[i])
+
+            if(no == None):
+
+                # Novo Estado
+                self.num_nos += 1
+                novo_no = self.Estado()
+                novo_no.name = self.num_nos
+                valor = word[i]
+
+                if no_atual == self.anti_raiz:
+                    self.anti_raiz = None
+
+                if len(no_atual.transicoes):
+                    self.adicionar(no_atual.transicoes[-1].estado2)
+                    self.ultimo = no_atual
+
+                self.transicao(no_atual, novo_no, valor)
+
+                no_atual = novo_no
+                
+            else:
+                no_atual = no
+        no_atual.final = True
+
+        if self.anti_raiz == None:
+            self.anti_raiz = no_atual
 
     def criar(self) -> None:
         '''
         Cria uma FST a partir de uma lista de palavras e imprime o grafo em um arquivo .dot
         '''
-        no_atual = self.raiz
         for j in range(len(self.words)):
-            word = self.words[j]
-            
-            for i in range(len(word)):
-                no = self.achar_transicao(no_atual, word[i])
+            self.add(self.words[j])            
 
-                if(no == None):
-
-                    # Novo Estado
-                    self.num_nos += 1
-                    novo_no = self.Estado()
-                    novo_no.name = self.num_nos
-                    valor = word[i]
-
-                    if no_atual == self.anti_raiz:
-                        self.anti_raiz = None
-
-
-                    if len(no_atual.transicoes):
-                        self.adicionar(no_atual.transicoes[-1].estado2)
-
-                    # Transição
-                    nova_transicao = self.Transicao()
-                    nova_transicao.estado1 = no_atual
-                    nova_transicao.estado2 = novo_no
-                    nova_transicao.valor = valor
-                    no_atual.transicoes.append(nova_transicao)
-
-                    # Transição Inversa
-                    transicao_inversa = self.Transicao()
-                    transicao_inversa.estado1 = novo_no
-                    transicao_inversa.estado2 = no_atual
-                    transicao_inversa.valor = valor
-                    novo_no.transicoes_inversas.append(transicao_inversa)
-
-                    no_atual = novo_no
-                    
-                else:
-                    no_atual = no
-            no_atual.final = True
-
-            if self.anti_raiz == None:
-                self.anti_raiz = no_atual
-
-            no_atual = self.raiz
-        
+        self.adicionar(self.ultimo)
         self.adicionar(self.raiz)
+
+        self.words = []
