@@ -6,21 +6,8 @@ class FST_Otimizado:
         def __init__(self) -> None:
             self.transicoes = {}
             self.transicoes_inversas = {}
-            self.ultima_transicao = None
-            self.ultima_transicao_inversa = None
             self.final = False
             self.congelado = False
-
-    class Transicao:
-        def __init__(self) -> None:
-            self.estado = None
-            self.valor = None
-        
-        def __eq__(self, other) -> bool:
-            return self.valor == other.valor
-        
-        def __hash__(self) -> int:
-            return hash((self.estado, self.valor))
     
     def __init__(self, words: list) -> None:
         self.raiz = self.Estado()
@@ -59,8 +46,8 @@ class FST_Otimizado:
         if estado.final:
             self.matches.append(word)
 
-        for transicao in estado.transicoes:
-            self.combinacoes(transicao.estado, word + transicao.valor)
+        for valor, estado_inter in estado.transicoes.items():
+            self.combinacoes(estado_inter, word + valor)
 
     def achar_transicao(self, estado: Estado, valor: str) -> Estado:
         '''
@@ -79,24 +66,17 @@ class FST_Otimizado:
         Cria uma transição entre dois estados
         '''
         # Transição
-        nova_transicao = self.Transicao()
-        nova_transicao.estado = estado2
-        nova_transicao.valor = valor
-        estado1.transicoes.append(nova_transicao)
+        estado1.transicoes[valor] = estado2
 
         # Transição Inversa
-        transicao_inversa = self.Transicao()
-        transicao_inversa.estado = estado1
-        transicao_inversa.valor = valor
-        estado2.transicoes_inversas.append(transicao_inversa)
+        estado2.transicoes_inversas[valor] = estado1
 
     def junta_transicoes(self, estado: Estado) -> None:
         '''
         Junta as transições da anti_raiz que tem mesmo sufixo
-        '''
-        transicao_nova = estado.transicoes_inversas[-1]
-        valor = transicao_nova.valor
-        no_adicionado = transicao_nova.estado
+        '''        
+        valor, no_adicionado = estado.transicoes_inversas.popitem()
+        estado.transicoes_inversas[valor] = no_adicionado
 
         if no_adicionado.congelado == False:
             return
@@ -118,17 +98,16 @@ class FST_Otimizado:
         if len(no_adicionado.transicoes) > 1:
             return
         
-        estado.transicoes_inversas.pop()
+        estado.transicoes_inversas.popitem()
 
-        transicao_inv = no_adicionado.transicoes_inversas[-1]
-
-        transicao_inv.estado.transicoes[-1].estado = no_similar
+        valor, aux = no_adicionado.transicoes_inversas.popitem()
+        no_adicionado.transicoes_inversas[valor] = aux
+        
+        valor, aux2 = aux.transicoes.popitem()
+        aux.transicoes[valor] = no_similar
 
         # Transição Inversa
-        nova_transicao_inversa = self.Transicao()
-        nova_transicao_inversa.estado = transicao_inv.estado
-        nova_transicao_inversa.valor = transicao_inv.valor
-        no_similar.transicoes_inversas.append(nova_transicao_inversa)
+        no_similar.transicoes_inversas[transicao_inv.valor] = transicao_inv.estado
 
         self.junta_transicoes(no_similar)
 
@@ -140,16 +119,19 @@ class FST_Otimizado:
         no_atual.congelado = True
 
         while len(no_atual.transicoes):
-            no_atual = no_atual.transicoes[-1].estado
+            valor, aux = no_atual.transicoes.popitem()
+            no_atual.transicoes[valor] = aux
+            no_atual = aux
             no_atual.congelado = True
 
         if no_atual == self.anti_raiz:
             return
         
-        valor = no_atual.transicoes_inversas[-1].valor
-        no_atual = no_atual.transicoes_inversas[-1].estado
+        valor, aux = no_atual.transicoes_inversas.popitem()
+        no_atual.transicoes_inversas[valor] = aux
+        no_atual = aux
 
-        no_atual.transicoes.pop()
+        no_atual.transicoes.popitem()
 
         self.transicao(no_atual, self.anti_raiz, valor)
 
@@ -173,7 +155,9 @@ class FST_Otimizado:
                     self.anti_raiz = None
 
                 if len(no_atual.transicoes):
-                    self.adicionar(no_atual.transicoes[-1].estado)
+                    valor, aux = no_atual.transicoes.popitem()
+                    no_atual.transicoes[valor] = aux
+                    self.adicionar(aux)
                     self.ultimo = no_atual
 
                 self.transicao(no_atual, novo_no, word[i])
@@ -192,9 +176,12 @@ class FST_Otimizado:
         Cria uma FST a partir de uma lista de palavras e imprime o grafo em um arquivo .dot
         '''
         for j in range(len(self.words)):
-            self.add(self.words[j])            
+            self.add(self.words[j])  
 
-        self.adicionar(self.ultimo.transicoes[-1].estado)
+        valor, aux = self.ultimo.transicoes.popitem()
+        self.ultimo.transicoes[valor] = aux          
+
+        self.adicionar(aux)
         self.adicionar(self.raiz)
 
         self.words = []
