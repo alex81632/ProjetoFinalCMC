@@ -266,12 +266,10 @@ class FST:
             no = self.achar_transicao(no_atual, word[i])
 
             if(no == None):
-
                 # Novo Estado
                 self.num_nos += 1
                 novo_no = self.Estado()
                 novo_no.name = self.num_nos
-                valor = word[i]
 
                 if no_atual == self.anti_raiz:
                     self.anti_raiz = None
@@ -280,7 +278,7 @@ class FST:
                     self.adicionar(no_atual.transicoes[-1].estado2)
                     self.ultimo = no_atual
 
-                self.transicao(no_atual, novo_no, valor)
+                self.transicao(no_atual, novo_no, word[i])
 
                 no_atual = novo_no
                 
