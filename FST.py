@@ -217,6 +217,9 @@ class FST:
         if len(no_similar.transicoes) > 1:
             return
         
+        if len(no_adicionado.transicoes) > 1:
+            return
+        
         estado.transicoes_inversas.pop()
 
         transicao_inv = no_adicionado.transicoes_inversas[-1]
@@ -296,7 +299,7 @@ class FST:
         for j in range(len(self.words)):
             self.add(self.words[j])            
 
-        self.adicionar(self.ultimo)
+        self.adicionar(self.ultimo.transicoes[-1].estado2)
         self.adicionar(self.raiz)
 
         self.words = []
