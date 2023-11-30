@@ -107,7 +107,7 @@ class FST_Otimizado:
         aux.transicoes[valor] = no_similar
 
         # Transição Inversa
-        no_similar.transicoes_inversas[transicao_inv.valor] = transicao_inv.estado
+        no_similar.transicoes_inversas[valor] = aux
 
         self.junta_transicoes(no_similar)
 
@@ -184,4 +184,28 @@ class FST_Otimizado:
         self.adicionar(aux)
         self.adicionar(self.raiz)
 
-        self.words = []
+    
+    def otimizar_memoria(self) -> None:
+        '''
+        Otimiza a memória da FST
+        '''
+        self.anti_raiz = None
+        self.ultimo = None
+        self.words = None
+
+        self.criar = None
+        self.add = None
+        self.adicionar = None
+        self.junta_transicoes = None
+        self.transicao
+
+        self.otimizar(self.raiz)
+
+    def otimizar(self, estado: Estado) -> None:
+        '''
+        Função recursiva que passa pelos nos liberando memoria
+        '''
+        estado.transicoes_inversas = None
+        
+        for valor, estado_inter in estado.transicoes.items():
+            self.otimizar(estado_inter)
